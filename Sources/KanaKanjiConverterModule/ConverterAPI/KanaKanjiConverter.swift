@@ -7,7 +7,6 @@
 //
 
 import Algorithms
-import EfficientNGram
 public import Foundation
 import SwiftUtils
 
@@ -43,64 +42,14 @@ public final class KanaKanjiConverter {
     private var lattice: Lattice = Lattice()
     private var completedData: Candidate?
     private var lastData: DicdataElement?
-    /// Zenzaiのためのzenzモデル
-    private var zenz: Zenz?
-    private var zenzaiCache: Kana2Kanji.ZenzaiCache?
-    private var zenzaiPersonalization: (mode: ConvertRequestOptions.ZenzaiMode.PersonalizationMode, base: EfficientNGram, personal: EfficientNGram)?
-    public private(set) var zenzStatus: String = ""
     private var dicdataStoreState: DicdataStoreState
 
     /// リセットする関数
     public func stopComposition() {
-        self.zenz?.endSession()
-        self.zenzaiPersonalization = nil
-        self.zenzaiCache = nil
         self.previousInputData = nil
         self.lattice = .init()
         self.completedData = nil
         self.lastData = nil
-    }
-
-    private func getZenzaiPersonalization(mode: ConvertRequestOptions.ZenzaiMode.PersonalizationMode?) -> (mode: ConvertRequestOptions.ZenzaiMode.PersonalizationMode, base: EfficientNGram, personal: EfficientNGram)? {
-        guard let mode else {
-            return nil
-        }
-        if let zenzaiPersonalization, zenzaiPersonalization.mode == mode {
-            return zenzaiPersonalization
-        }
-        let tokenizer = ZenzTokenizer()
-        let baseModel = EfficientNGram(baseFilename: mode.baseNgramLanguageModel, n: mode.n, d: mode.d, tokenizer: tokenizer)
-        let personalModel = EfficientNGram(baseFilename: mode.personalNgramLanguageModel, n: mode.n, d: mode.d, tokenizer: tokenizer)
-        self.zenzaiPersonalization = (mode, baseModel, personalModel)
-        return (mode, baseModel, personalModel)
-    }
-
-    package func getModel(modelURL: URL) -> Zenz? {
-        if let model = self.zenz, model.resourceURL == modelURL {
-            self.zenzStatus = "load \(modelURL.absoluteString)"
-            return model
-        } else {
-            do {
-                self.zenz = try Zenz(resourceURL: modelURL)
-                self.zenzStatus = "load \(modelURL.absoluteString)"
-                return self.zenz
-            } catch {
-                self.zenzStatus = "load \(modelURL.absoluteString)    " + error.localizedDescription
-                return nil
-            }
-        }
-    }
-
-    public func predictNextCharacter(leftSideContext: String, count: Int, options: ConvertRequestOptions) -> [(character: Character, value: Float)] {
-        guard let zenz = self.getModel(modelURL: options.zenzaiMode.weightURL) else {
-            print("zenz-v2 model unavailable")
-            return []
-        }
-        guard options.zenzaiMode.versionDependentMode.version == .v2 else {
-            print("next character prediction requires zenz-v2 models, not zenz-v1 nor zenz-v3 and later")
-            return []
-        }
-        return zenz.predictNextCharacter(leftSideContext: leftSideContext, count: count)
     }
 
     /// 入力する言語が分かったらこの関数をなるべく早い段階で呼ぶことで、SpellCheckerの初期化が行われ、変換がスムーズになる
@@ -526,27 +475,9 @@ public final class KanaKanjiConverter {
 
         if case .完全一致 = options.requestQuery {
             let merged = self.getUniqueCandidate(wholeSentenceUniqueCandidates.chained(userShortcutsCandidates)).sorted(by: {$0.value > $1.value})
-            if options.zenzaiMode.enabled {
-                return ConversionResult(mainResults: merged, firstClauseResults: [])
-            } else {
-                return ConversionResult(mainResults: merged, firstClauseResults: [])
-            }
+            return ConversionResult(mainResults: merged, firstClauseResults: [])
         }
-        // モデル重みを統合
-        let bestFiveSentenceCandidates: [Candidate]
-        if options.zenzaiMode.enabled {
-            // FIXME: もう少し良い方法はありそうだけど、短期的にかなりハックな実装にした
-            // candidateのvalueをZenzaiの出力順に書き換えることで、このあとのrerank処理で騙されてくれるようになっている
-            // より根本的には、`Candidate`にAI評価値をもたせるなどの方法が必要そう
-            var first5 = Array(wholeSentenceUniqueCandidates.prefix(5))
-            let values = first5.map(\.value).sorted(by: >)
-            for (i, v) in zip(first5.indices, values) {
-                first5[i].value = v
-            }
-            bestFiveSentenceCandidates = first5
-        } else {
-            bestFiveSentenceCandidates = wholeSentenceUniqueCandidates.min(count: 5, sortedBy: {$0.value > $1.value})
-        }
+        let bestFiveSentenceCandidates = wholeSentenceUniqueCandidates.min(count: 5, sortedBy: {$0.value > $1.value})
 
         let fullCandidates: [Candidate]
         do {
@@ -678,26 +609,9 @@ public final class KanaKanjiConverter {
     ///   - N_best: 計算途中で保存する候補数。実際に得られる候補数とは異なる。
     /// - Returns:
     ///   結果のラティスノードと、計算済みノードの全体
-    private func convertToLattice(_ inputData: ComposingText, N_best: Int, zenzaiMode: ConvertRequestOptions.ZenzaiMode, needTypoCorrection: Bool) -> (result: LatticeNode, lattice: Lattice)? {
+    private func convertToLattice(_ inputData: ComposingText, N_best: Int, needTypoCorrection: Bool) -> (result: LatticeNode, lattice: Lattice)? {
         if inputData.convertTarget.isEmpty {
             return nil
-        }
-
-        // FIXME: enable cache based zenzai
-        if zenzaiMode.enabled, let model = self.getModel(modelURL: zenzaiMode.weightURL) {
-            let (result, nodes, cache) = self.converter.all_zenzai(
-                inputData,
-                zenz: model,
-                zenzaiCache: self.zenzaiCache,
-                inferenceLimit: zenzaiMode.inferenceLimit,
-                requestRichCandidates: zenzaiMode.requestRichCandidates,
-                personalizationMode: self.getZenzaiPersonalization(mode: zenzaiMode.personalizationMode),
-                versionDependentConfig: zenzaiMode.versionDependentMode,
-                dicdataStoreState: self.dicdataStoreState
-            )
-            self.zenzaiCache = cache
-            self.previousInputData = inputData
-            return (result, nodes)
         }
 
         guard let previousInputData else {
@@ -784,7 +698,7 @@ public final class KanaKanjiConverter {
         let needTypoCorrection = options.needTypoCorrection ?? false
         #endif
 
-        guard let result = self.convertToLattice(inputData, N_best: options.N_best, zenzaiMode: options.zenzaiMode, needTypoCorrection: needTypoCorrection) else {
+        guard let result = self.convertToLattice(inputData, N_best: options.N_best, needTypoCorrection: needTypoCorrection) else {
             return ConversionResult(mainResults: [], firstClauseResults: [])
         }
 

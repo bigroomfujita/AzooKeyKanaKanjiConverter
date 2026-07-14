@@ -28,7 +28,7 @@ public struct ConvertRequestOptions: Sendable {
     ///   - textReplacer: 予測変換のための置換機を指定します。
     ///   - specialCandidateProviders: 特殊変換を実施する変換関数を挿入します
     ///   - metadata: メタデータを指定します。詳しくは`ConvertRequestOptions.Metadata`を参照してください。
-    public init(N_best: Int = 10, needTypoCorrection: Bool? = nil, requireJapanesePrediction: Bool, requireEnglishPrediction: Bool, keyboardLanguage: KeyboardLanguage, englishCandidateInRoman2KanaInput: Bool = false, fullWidthRomanCandidate: Bool = false, halfWidthKanaCandidate: Bool = false, learningType: LearningType, maxMemoryCount: Int = 65536, shouldResetMemory: Bool = false, memoryDirectoryURL: URL, sharedContainerURL: URL, textReplacer: TextReplacer, specialCandidateProviders: [any SpecialCandidateProvider]?, zenzaiMode: ZenzaiMode = .off, preloadDictionary: Bool = false, metadata: ConvertRequestOptions.Metadata?) {
+    public init(N_best: Int = 10, needTypoCorrection: Bool? = nil, requireJapanesePrediction: Bool, requireEnglishPrediction: Bool, keyboardLanguage: KeyboardLanguage, englishCandidateInRoman2KanaInput: Bool = false, fullWidthRomanCandidate: Bool = false, halfWidthKanaCandidate: Bool = false, learningType: LearningType, maxMemoryCount: Int = 65536, shouldResetMemory: Bool = false, memoryDirectoryURL: URL, sharedContainerURL: URL, textReplacer: TextReplacer, specialCandidateProviders: [any SpecialCandidateProvider]?, preloadDictionary: Bool = false, metadata: ConvertRequestOptions.Metadata?) {
         self.N_best = N_best
         self.needTypoCorrection = needTypoCorrection
         self.requireJapanesePrediction = requireJapanesePrediction
@@ -45,7 +45,6 @@ public struct ConvertRequestOptions: Sendable {
         self.metadata = metadata
         self.textReplacer = textReplacer
         self.specialCandidateProviders = specialCandidateProviders ?? KanaKanjiConverter.defaultSpecialCandidateProviders
-        self.zenzaiMode = zenzaiMode
         self.preloadDictionary = preloadDictionary
 
         if shouldResetMemory {
@@ -72,7 +71,6 @@ public struct ConvertRequestOptions: Sendable {
     public var sharedContainerURL: URL
     /// providers to generate "special" candidates such as Unicode conversion.
     public var specialCandidateProviders: [any SpecialCandidateProvider]
-    public var zenzaiMode: ZenzaiMode
     public var preloadDictionary: Bool
     // メタデータ
     public var metadata: Metadata?
@@ -123,121 +121,4 @@ public struct ConvertRequestOptions: Sendable {
         case 完全一致
     }
 
-    public struct ZenzaiV2DependentMode: Sendable, Equatable, Hashable {
-        public init(profile: String? = nil, leftSideContext: String? = nil, maxLeftSideContextLength: Int? = nil) {
-            self.profile = profile
-            self.leftSideContext = leftSideContext
-            self.maxLeftSideContextLength = maxLeftSideContextLength
-        }
-
-        /// プロフィールコンテクストを設定した場合、プロフィールを反映したプロンプトが自動的に付与されます。プロフィールは10〜20文字程度の長さにとどめることを推奨します。
-        public var profile: String?
-        /// 左側の文字列を文脈として与えます。
-        public var leftSideContext: String?
-        /// 文脈の最大長を制約します
-        public var maxLeftSideContextLength: Int?
-    }
-
-    public struct ZenzaiV3DependentMode: Sendable, Equatable, Hashable {
-        public init(
-            profile: String? = nil,
-            topic: String? = nil,
-            style: String? = nil,
-            preference: String? = nil,
-            leftSideContext: String? = nil,
-            maxLeftSideContextLength: Int? = nil
-        ) {
-            self.profile = profile
-            self.topic = topic
-            self.style = style
-            self.preference = preference
-            self.leftSideContext = leftSideContext
-            self.maxLeftSideContextLength = maxLeftSideContextLength
-        }
-
-        /// プロフィールコンテクストを設定した場合、プロフィールを反映したプロンプトが自動的に付与されます。プロフィールは10〜20文字程度の長さにとどめることを推奨します。
-        public var profile: String?
-        /// topicを設定した場合、話題にあった変換が自動的に優先されます。話題は10〜20文字程度の長さにとどめることを推奨します。
-        public var topic: String?
-        /// styleを設定した場合、文章のスタイルにあった変換が自動的に優先されます。スタイルは10〜20文字程度の長さにとどめることを推奨します。
-        public var style: String?
-        /// preferenceコンテクストを設定した場合、ユーザの書き方の好みに合わせた変換が自動的に優先されます。preferenceは10〜20文字程度の長さにとどめることを推奨します。
-        public var preference: String?
-        /// 左側の文字列を文脈として与えます。
-        public var leftSideContext: String?
-        /// 文脈の最大長を制約します
-        public var maxLeftSideContextLength: Int?
-    }
-
-    public enum ZenzVersion: Sendable, Equatable, Hashable {
-        case v1
-        case v2
-        case v3
-    }
-
-    public enum ZenzaiVersionDependentMode: Sendable, Equatable, Hashable {
-        case v1
-        case v2(ZenzaiV2DependentMode)
-        case v3(ZenzaiV3DependentMode)
-
-        public var version: ZenzVersion {
-            switch self {
-            case .v1:
-                return .v1
-            case .v2:
-                return .v2
-            case .v3:
-                return .v3
-            }
-        }
-    }
-
-    public struct ZenzaiMode: Sendable, Equatable {
-        public struct PersonalizationMode: Sendable, Equatable {
-            public init(baseNgramLanguageModel: String, personalNgramLanguageModel: String, n: Int = 5, d: Double = 0.75, alpha: Float = 0.5) {
-                self.baseNgramLanguageModel = baseNgramLanguageModel
-                self.personalNgramLanguageModel = personalNgramLanguageModel
-                self.n = n
-                self.d = d
-                self.alpha = alpha
-            }
-
-            var n: Int = 5
-            var d: Double = 0.75
-            var alpha: Float = 0.5
-            var baseNgramLanguageModel: String
-            var personalNgramLanguageModel: String
-        }
-        public static let off = ZenzaiMode(
-            enabled: false,
-            weightURL: URL(fileURLWithPath: ""),
-            inferenceLimit: 10,
-            requestRichCandidates: false,
-            versionDependentMode: .v3(.init())
-        )
-
-        /// activate *Zenzai* - Neural Kana-Kanji Conversiion Engine
-        /// - Parameters:
-        ///    - weight: path for model weight (gguf)
-        ///    - inferenceLimit: applying inference count limitation. Smaller limit makes conversion faster but quality will be worse. (Default: 10)
-        ///    - requestRichCandidates: when this flag is true, the converter spends more time but generate richer N-Best candidates for candidate list view. Usually this option is not recommended for live conversion.
-        ///    - personalizationMode: values for personalization.
-        ///    - versionDependentMode: specify zenz model version and its configuration.
-        public static func on(weight: URL, inferenceLimit: Int = 10, requestRichCandidates: Bool = false, personalizationMode: PersonalizationMode?, versionDependentMode: ZenzaiVersionDependentMode = .v3(.init())) -> Self {
-            ZenzaiMode(
-                enabled: true,
-                weightURL: weight,
-                inferenceLimit: inferenceLimit,
-                requestRichCandidates: requestRichCandidates,
-                personalizationMode: personalizationMode,
-                versionDependentMode: versionDependentMode
-            )
-        }
-        var enabled: Bool
-        var weightURL: URL
-        var inferenceLimit: Int
-        var requestRichCandidates: Bool
-        var personalizationMode: PersonalizationMode?
-        var versionDependentMode: ZenzaiVersionDependentMode
-    }
 }
