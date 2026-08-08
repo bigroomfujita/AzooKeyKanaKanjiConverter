@@ -325,11 +325,16 @@ struct TypoCorrectionGenerator: Sendable {
         "ツ": [TypoUnit("ッ", weight: 6.0), TypoUnit("ヅ", weight: 4.5)],
         "テ": [TypoUnit("デ", weight: 6.0)],
         "ト": [TypoUnit("ド", weight: 4.5)],
-        "ハ": [TypoUnit("バ", weight: 4.5), TypoUnit("パ", weight: 6.0)],
-        "ヒ": [TypoUnit("ビ"), TypoUnit("ピ", weight: 4.5)],
-        "フ": [TypoUnit("ブ"), TypoUnit("プ", weight: 4.5)],
-        "ヘ": [TypoUnit("ベ"), TypoUnit("ペ", weight: 4.5)],
-        "ホ": [TypoUnit("ボ"), TypoUnit("ポ", weight: 4.5)],
+        // The ten-key cycles plain -> dakuten -> handakuten, so reaching a
+        // handakuten from the plain kana means the user stopped two taps
+        // short. That is not a slip, so only the dakuten substitution is
+        // offered here. The one-tap-short slip, dakuten -> handakuten, stays
+        // in the five entries below.
+        "ハ": [TypoUnit("バ", weight: 4.5)],
+        "ヒ": [TypoUnit("ビ")],
+        "フ": [TypoUnit("ブ")],
+        "ヘ": [TypoUnit("ベ")],
+        "ホ": [TypoUnit("ボ")],
         "バ": [TypoUnit("パ")],
         "ビ": [TypoUnit("ピ")],
         "ブ": [TypoUnit("プ")],
@@ -337,7 +342,35 @@ struct TypoCorrectionGenerator: Sendable {
         "ボ": [TypoUnit("ポ")],
         "ヤ": [TypoUnit("ャ")],
         "ユ": [TypoUnit("ュ")],
-        "ヨ": [TypoUnit("ョ")]
+        "ヨ": [TypoUnit("ョ")],
+        // Small vowels. The ten-key has no small vowel of its own, so the user
+        // types the plain vowel and converts it afterwards, and forgetting
+        // that conversion is the slip these correct.
+        //
+        // The keys are two characters rather than a bare `ア`: the
+        // substitution is then only offered after a consonant that can carry
+        // it, so a vowel at the head of a word is never made small on its own
+        // and `ウオーム` cannot become `ゥオーム`. `ヤ`/`ユ`/`ヨ`/`ツ` above
+        // need no such guard because their small forms follow any kana.
+        "フア": [TypoUnit("ファ")],
+        "フイ": [TypoUnit("フィ")],
+        "フエ": [TypoUnit("フェ")],
+        "フオ": [TypoUnit("フォ")],
+        "ツア": [TypoUnit("ツァ")],
+        "ツエ": [TypoUnit("ツェ")],
+        "ツオ": [TypoUnit("ツォ")],
+        "クオ": [TypoUnit("クォ")],
+        // The plain form of each of these is an ordinary word on its own
+        // (`てい`, `ちえ`, `うえ`), so correcting it has to cost more than
+        // correcting a pair that means nothing unless it is made small.
+        "シエ": [TypoUnit("シェ", weight: 6.0)],
+        "ジエ": [TypoUnit("ジェ", weight: 6.0)],
+        "チエ": [TypoUnit("チェ", weight: 6.0)],
+        "テイ": [TypoUnit("ティ", weight: 6.0)],
+        "デイ": [TypoUnit("ディ", weight: 6.0)],
+        "ウイ": [TypoUnit("ウィ", weight: 6.0)],
+        "ウエ": [TypoUnit("ウェ", weight: 6.0)],
+        "ウオ": [TypoUnit("ウォ", weight: 6.0)]
     ].mapValues {
         $0.map {
             TypoCandidate(
