@@ -438,9 +438,16 @@ public final class DicdataStore {
     package func getDicdataFromLoudstxt3(identifier: String, indices: some Sequence<Int>, state: DicdataStoreState) -> [DicdataElement] {
         // Group indices by shard
         let dict = [Int: [Int]].init(grouping: indices, by: { $0 >> DictionaryBuilder.shardShift })
+        // Swift randomises `Dictionary` iteration order per process launch. The
+        // dicdata this returns keeps the order it is appended in, and equal-score
+        // candidates downstream are seated by arrival order, so iterating the
+        // shards unsorted makes the candidate bar differ between launches for the
+        // same input. Sorting the shard keys is what makes a run reproducible.
+        let shardKeys = dict.keys.sorted()
         var data: [DicdataElement] = []
         if identifier == "user", let userDictionaryURL = state.userDictionaryURL {
-            for (key, value) in dict {
+            for key in shardKeys {
+                let value = dict[key]!
                 let fileID = "\(identifier)\(key)"
                 data.append(contentsOf: LOUDS.getUserDictionaryDataForLoudstxt3(
                     fileID,
@@ -454,7 +461,8 @@ public final class DicdataStore {
             }
         }
         if identifier == "user_shortcuts", let userDictionaryURL = state.userDictionaryURL {
-            for (key, value) in dict {
+            for key in shardKeys {
+                let value = dict[key]!
                 let fileID = "\(identifier)\(key)"
                 data.append(contentsOf: LOUDS.getUserShortcutsDataForLoudstxt3(
                     fileID,
@@ -468,7 +476,8 @@ public final class DicdataStore {
             }
         }
         if identifier == "memory", let memoryURL = state.memoryURL {
-            for (key, value) in dict {
+            for key in shardKeys {
+                let value = dict[key]!
                 let fileID = "\(identifier)\(key)"
                 data.append(contentsOf: LOUDS.getMemoryDataForLoudstxt3(
                     fileID,
@@ -481,7 +490,8 @@ public final class DicdataStore {
                 $0.metadata = .isLearned
             }
         }
-        for (key, value) in dict {
+        for key in shardKeys {
+            let value = dict[key]!
             // Default dictionary shards are stored under escaped identifiers with concatenated shard suffix
             let escaped = DictionaryBuilder.escapedIdentifier(identifier)
             let fileID = "\(escaped)\(key)"
@@ -670,15 +680,19 @@ public final class DicdataStore {
         }
         let prefixIndices = self.startingFromPrefixSearch(query: first, charIDs: charIDs, depth: depth, maxCount: maxCount, state: state)
 
+        // `prefixNodeIndices` walks disjoint subtrees, so it already returns each
+        // node once. Wrapping it in a `Set` deduplicated nothing and only threw
+        // the search order away, which `Prediction`'s insertion loop preserves
+        // for equal-value candidates.
         result.append(
-            contentsOf: self.getDicdataFromLoudstxt3(identifier: first, indices: Set(prefixIndices), state: state)
+            contentsOf: self.getDicdataFromLoudstxt3(identifier: first, indices: prefixIndices, state: state)
                 .filter { Self.predictionUsable[$0.rcid] }
         )
         let userDictIndices = self.startingFromPrefixSearch(query: "user", charIDs: charIDs, maxCount: maxCount, state: state)
-        result.append(contentsOf: self.getDicdataFromLoudstxt3(identifier: "user", indices: Set(consume userDictIndices), state: state))
+        result.append(contentsOf: self.getDicdataFromLoudstxt3(identifier: "user", indices: consume userDictIndices, state: state))
         if state.learningMemoryManager.enabled {
             let memoryDictIndices = self.startingFromPrefixSearch(query: "memory", charIDs: charIDs, maxCount: maxCount, state: state)
-            result.append(contentsOf: self.getDicdataFromLoudstxt3(identifier: "memory", indices: Set(consume memoryDictIndices), state: state))
+            result.append(contentsOf: self.getDicdataFromLoudstxt3(identifier: "memory", indices: consume memoryDictIndices, state: state))
             result.append(contentsOf: state.learningMemoryManager.temporaryPrefixMatch(charIDs: charIDs))
         }
         return result
