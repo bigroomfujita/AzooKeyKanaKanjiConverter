@@ -46,14 +46,13 @@ let package = Package(
             exclude: [
                 "azooKey_dictionary_storage/README.md",
                 "azooKey_dictionary_storage/LICENSE",
-                "azooKey_emoji_dictionary_storage/data",
-                "azooKey_emoji_dictionary_storage/scripts",
-                "azooKey_emoji_dictionary_storage/requirements.txt",
-                "azooKey_emoji_dictionary_storage/README.md"
+                // Keebo does not call post-composition emoji prediction. Keep
+                // the upstream submodule out of this product so its generated
+                // dictionary is neither built nor copied into client apps.
+                "azooKey_emoji_dictionary_storage"
             ],
             resources: [
-                .copy("azooKey_dictionary_storage/Dictionary"),
-                .copy("azooKey_emoji_dictionary_storage/EmojiDictionary")
+                .copy("azooKey_dictionary_storage/Dictionary")
             ],
             swiftSettings: swiftSettings
         ),
