@@ -8,6 +8,8 @@ package final class DicdataStoreState {
 
     var keyboardLanguage: KeyboardLanguage = .ja_JP
     private(set) var dynamicUserDictionary: [DicdataElement] = []
+    private(set) var dynamicUserDictionaryByRuby: [String: [DicdataElement]] = [:]
+    private(set) var dynamicUserDictionaryPrefixes: Set<String> = []
     var learningMemoryManager: LearningManager
 
     var userDictionaryURL: URL?
@@ -76,6 +78,13 @@ package final class DicdataStoreState {
         self.dynamicUserDictionary.mutatingForEach {
             $0.metadata = .isFromUserDictionary
         }
+        self.dynamicUserDictionaryByRuby = Dictionary(grouping: self.dynamicUserDictionary, by: \.ruby)
+        var prefixes: Set<String> = []
+        for ruby in self.dynamicUserDictionaryByRuby.keys {
+            var s = ""
+            for c in ruby { s.append(c); prefixes.insert(s) }
+        }
+        self.dynamicUserDictionaryPrefixes = prefixes
     }
 
     private func resetMemoryLOUDSCache() {
