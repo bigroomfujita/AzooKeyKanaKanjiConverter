@@ -17,12 +17,9 @@ var dependencies: [Package.Dependency] = [
     .package(url: "https://github.com/apple/swift-algorithms", from: "1.0.0"),
     .package(url: "https://github.com/apple/swift-collections", from: "1.0.0"),
     .package(url: "https://github.com/apple/swift-argument-parser", .upToNextMajor(from: "1.0.0")),
-    .package(url: "https://github.com/ensan-hcl/swift-tokenizers", from: "0.0.1")
 ]
 
-var efficientNGramDependencies: [Target.Dependency] = [
-    .product(name: "Transformers", package: "swift-tokenizers")
-]
+var efficientNGramDependencies: [Target.Dependency] = []
 
 #if (!os(Linux) || !canImport(Android)) && !os(Windows)
 // Android環境・Windows環境ではSwiftyMarisaが利用できないため、EfficientNGramは除外する。
@@ -45,7 +42,6 @@ var targets: [Target] = [
     .target(
         name: "EfficientNGram",
         dependencies: efficientNGramDependencies,
-        resources: [.copy("tokenizer")],
         swiftSettings: swiftSettings
     ),
     .target(
