@@ -135,6 +135,8 @@ let options = ConvertRequestOptions(
 
 ### 辞書データ
 
+ZN0s の検証用ブランチでは絵文字辞書を同梱しません。`TextReplacer.withDefaultEmojiDictionary()` は空の互換 API です。絵文字予測が必要な場合は `TextReplacer.init(emojiDataProvider:)` に辞書を渡してください。
+
 AzooKeyKanaKanjiConverterのデフォルト辞書として[azooKey_dictionary_storage](https://github.com/ensan-hcl/azooKey_dictionary_storage)がサブモジュールとして指定されています。過去のバージョンの辞書データは[Google Drive](https://drive.google.com/drive/folders/1Kh7fgMFIzkpg7YwP3GhWTxFkXI-yzT9E?usp=sharing)からもダウンロードすることができます。
 
 英字readingのエントリも利用できます。例えばreadingと表記がともに `GitHub` のエントリは、`Git` の前方一致や `GitHub` の完全一致で英語候補になります。辞書のreading・表記はそのまま保持し、検索時は入力中の小文字を対応する大文字にも一致させます。大文字の入力は大文字だけに一致します。例えば `git` は `GitHub` と `github` の両方に一致し、`Git` は `github` に一致しません。この規則は語中にも適用します。登録条件は、ASCII英数字・半角スペース・`- ' ’ & . ! ? , : ; =` だけで構成され、英字を1文字以上含むことです。記号・スペースの位置や連続回数は制限せず、大小文字を含めて元の表記を保持します。`.NET`、`=LOVE`、`Yahoo!!`、`New York`、`R & D` などに対応します。タブ・改行・全角文字・アクセント付き文字など、許可文字以外を含む表記は対象外です。検索キーは英字をまだ含まない `.`・`=`・半角スペースなども許可し、登録語を前方一致で補完します。数字・記号・スペースは完全一致で照合し、`'` と `’` は区別します。OSへの補完問い合わせは従来どおり英字だけの入力に限定します。
