@@ -74,12 +74,6 @@ var targets: [Target] = [
         swiftSettings: swiftSettings
     ),
     .testTarget(
-        name: "EfficientNGramTests",
-        dependencies: ["EfficientNGram"],
-        resources: [],
-        swiftSettings: swiftSettings
-    ),
-    .testTarget(
         name: "KanaKanjiConverterModuleTests",
         dependencies: ["KanaKanjiConverterModule"],
         resources: [
