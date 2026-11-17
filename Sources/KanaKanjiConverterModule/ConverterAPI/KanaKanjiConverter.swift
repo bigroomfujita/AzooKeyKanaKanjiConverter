@@ -413,6 +413,13 @@ public final class KanaKanjiConverter {
         }
     }
 
+    /// The dictionary entries whose reading starts with `katakanaKey`, as the
+    /// engine's prediction reads them (`getPredictionLOUDSDicdata`), in its
+    /// order. The engine's output and the dictionary are unchanged (keebo SK2).
+    public func predictionDictionaryEntries(forKatakana katakanaKey: String) -> [DicdataElement] {
+        self.converter.dicdataStore.getPredictionLOUDSDicdata(key: katakanaKey, state: self.dicdataStoreState)
+    }
+
     /// 動的ユーザ辞書を引数に与えたデータで上書きします。
     /// - Parameters:
     ///   - dicdata: ユーザ辞書エントリです。動的ユーザ辞書エントリは検索効率が悪いため、現実的な件数に抑えてください。
