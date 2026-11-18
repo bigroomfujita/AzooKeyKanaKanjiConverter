@@ -966,7 +966,6 @@ public final class KanaKanjiConverter {
             $0.previousInputData = inputData
             $0.lattice = result.lattice
         }
-        let inputStyle = inputData.input.last?.inputStyle ?? .direct
         let prefixCandidate = options.zenzaiMode.enabled ? self.currentSessionState.zenzaiCache?.prefixCandidate : nil
         // テンプレート候補の `text` は表示用に展開済みなので、ラティスや辞書候補との比較には元の表記を使う。
         let prefixText = prefixCandidate.map { self.prefixText(of: $0) }
@@ -1052,23 +1051,11 @@ public final class KanaKanjiConverter {
         do {
             // 予測変換を最大3件作成する（必要な場合のみsumsを構築）
             let bestThreePredictionCandidates: [Candidate]
-            var stablePredictionCandidates: [Candidate] = []
             if options.requireJapanesePrediction.isEnabled, let bestCandidateDataForPrediction {
                 let candidates = self.getUniqueCandidate(
                     self.getPredictionCandidate(bestCandidateDataForPrediction, composingText: inputData, options: options, prefixText: prefixText)
                 ).min(count: 3, sortedBy: {$0.value > $1.value})
-                stablePredictionCandidates = self.candidates(
-                    self.stablePredictionCandidates(
-                        composingText: inputData,
-                        inputStyle: inputStyle
-                    ),
-                    matchingPrefix: prefixText
-                )
-                predictionResults = self.mergeStableCandidates(
-                    stableCandidates: stablePredictionCandidates,
-                    otherCandidates: candidates,
-                    limit: 3
-                )
+                predictionResults = candidates
                 if options.requireJapanesePrediction.shouldMix {
                     bestThreePredictionCandidates = predictionResults
                 } else {
@@ -1104,15 +1091,7 @@ public final class KanaKanjiConverter {
                 ),
                 matchingPrefix: prefixText
             )
-            if options.requireJapanesePrediction.shouldMix {
-                fullCandidates = self.mergeStableCandidates(
-                    stableCandidates: stablePredictionCandidates,
-                    otherCandidates: mixedCandidates,
-                    limit: 5
-                )
-            } else {
-                fullCandidates = mixedCandidates.min(count: 5, sortedBy: {$0.value > $1.value})
-            }
+            fullCandidates = mixedCandidates.min(count: 5, sortedBy: {$0.value > $1.value})
         }
         // 文節のみ変換するパターン（上位5件）
         let uniqueFirstClauseCandidates = self.candidates(
@@ -1187,7 +1166,6 @@ public final class KanaKanjiConverter {
             wordCandidates = consume candidates
         }
 
-        self.updateStablePredictionCandidateCache(inputData: inputData, inputStyle: inputStyle, candidates: predictionResults)
 
         var result = consume fullCandidates
         // 3番目までに最低でも1つ、（誤り訂正ではなく）入力に完全一致する候補が入るようにする
