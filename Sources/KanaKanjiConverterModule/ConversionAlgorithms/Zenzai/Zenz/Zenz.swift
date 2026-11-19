@@ -20,13 +20,23 @@ private final class SharedZenzCache: @unchecked Sendable {
             if let cached = self.cache.object(forKey: key) {
                 return cached
             }
-            let zenz = try Zenz(resourceURL: resourceURL)
-            self.cache.setObject(zenz, forKey: key)
-            return zenz
+            // 同じプロセスでは、読込に失敗したモデルを読み直さない（keebo ZN1）。
+            if let failure = self.failures[resourceURL.absoluteString] {
+                throw failure
+            }
+            do {
+                let zenz = try Zenz(resourceURL: resourceURL)
+                self.cache.setObject(zenz, forKey: key)
+                return zenz
+            } catch {
+                self.failures[resourceURL.absoluteString] = error
+                throw error
+            }
         }
     }
 
     private let cache = NSCache<NSString, Zenz>()
+    private var failures: [String: any Error] = [:]
     private let lock = NSLock()
 }
 

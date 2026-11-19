@@ -1323,6 +1323,11 @@ public final class KanaKanjiConverter {
         }
         self.dicdataStoreState.updateIfRequired(options: options)
         let needTypoCorrection = self.isClassicTypoCorrectionEnabled(options)
+        // モデルを使えない要求は、ラティスから後処理まで Zenzai オフと同じ経路で扱う（keebo ZN1）。
+        var options = options
+        if options.zenzaiMode.enabled, self.getModel(modelURL: options.zenzaiMode.weightURL) == nil {
+            options.zenzaiMode = .off
+        }
 
         guard let result = self.convertToLattice(inputData, N_best: options.N_best, zenzaiMode: options.zenzaiMode, needTypoCorrection: needTypoCorrection) else {
             return ConversionResult(mainResults: [], predictionResults: [], englishPredictionResults: [], firstClauseResults: [])
